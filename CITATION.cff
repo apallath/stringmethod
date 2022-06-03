@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+references:
+  - authors:
+      - family-names: E
+        given-names: Weinan
+      - family-names: Ren
+        given-names: Weiqing
+      - family-names: "Vanden-Eijnden"
+        given-names: Eric
+    title: "Simplified and improved string method for computing the minimum energy paths in barrier-crossing events"
+    type: article
+    url: "https://dx.doi.org/10.1063/1.2720838"
