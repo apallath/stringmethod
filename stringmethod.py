@@ -174,9 +174,10 @@ class String2D:
         if clip_max is not None:
             V = V.clip(max=clip_max)
 
-        ax.contourf(self.X, self.Y, V, levels=levels, cmap=cmap)
+        cs = ax.contourf(self.X, self.Y, V, levels=levels, cmap=cmap)
         ax.contour(self.X, self.Y, V, levels=levels, colors="black", alpha=0.2)
-        return fig, ax
+        cbar = fig.colorbar(cs)
+        return fig, ax, cbar
 
     def plot_mep(self, **plot_V_kwargs):
         """
@@ -185,11 +186,11 @@ class String2D:
         Args:
             **plot_V_kwargs: Keyword arguments for plotting the energy landscape V.
         """
-        fig, ax = self.plot_V(**plot_V_kwargs)
+        fig, ax, cbar = self.plot_V(**plot_V_kwargs)
         ax.scatter(self.mep[0, 0], self.mep[0, 1], color='C0')
         ax.scatter(self.mep[-1, 0], self.mep[-1, 1], color='C0')
         ax.plot(self.mep[:, 0], self.mep[:, 1])
-        return fig, ax
+        return fig, ax, cbar
 
     def plot_mep_energy_profile(self, dpi=300):
         """
@@ -208,8 +209,8 @@ class String2D:
             string_cmap: Colormap to use for plotting the evolution of the string.
             **plot_V_kwargs: Keyword arguments for plotting the energy landscape V.
         """
-        fig, ax = self.plot_V(**plot_V_kwargs)
+        fig, ax, cbar = self.plot_V(**plot_V_kwargs)
         colors = cmap(np.linspace(0, 1, len(self.string_traj)))
         for sidx, string in enumerate(self.string_traj):
             ax.plot(string[:, 0], string[:, 1], '--', color=colors[sidx])
-        return fig, ax
+        return fig, ax, cbar
