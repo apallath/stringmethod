@@ -60,10 +60,11 @@ class String2D:
 
     def compute_mep(self, begin, end, mid=[], spline_order=2, npts=100, integrator='forward_euler', dt=0.1, tol=None, maxsteps=100, traj_every=10):
         """
-        Computes the minimum free energy path connecting the points `begin`
-        and `end`. Midpoints passed through `mid` are used to generate
-        an initial guess (a quadratic spline which interpolates through all the points).
+        Computes the minimum free energy path. The points `begin`
+        and `end` and the midpoints passed through `mid` are used to generate
+        an initial guess (a k-order spline which interpolates through all the points).
         If no midpoints are defined, then the initial guess is a line connecting `begin`
+        and `end`. The ends of the string are free to move, and are not fixed to `begin`
         and `end`.
 
         Args:
