@@ -29,6 +29,7 @@ class String2D:
         V: Array of shape (ny, nx) or (nx, ny) specifying energy values at each point on the grid.
         X: Grid of shape (ny, nx) or (nx, ny) containing x-coordinates of each point on the grid.
         Y: Grid of shape (ny, nx) or (nx, ny) containing y-coordinates of each point on the grid.
+        indexing: Indexing of V, X, and Y arrays ('xy' specifies (ny, nx), 'ij' specifies (nx, ny); default = 'xy').
         gradX: Gradient in x.
         gradY: Gradient in y.
         string_traj: Trajectory showing the evolution of the string (default=[]).
@@ -44,9 +45,11 @@ class String2D:
         self.grid = np.vstack([self.X.ravel(), self.Y.ravel()]).T
 
         # Compute gradients
-        if indexing == 'xy':
+        self.indexing = indexing
+
+        if self.indexing == 'xy':
             self.gradY, self.gradX = np.gradient(self.V, self.x, self.y)
-        elif indexing == 'ij':
+        elif self.indexing == 'ij':
             self.gradX, self.gradY = np.gradient(self.V, self.x, self.y)
         else:
             raise ValueError("Indexing method not recognized.")
@@ -186,6 +189,15 @@ class String2D:
         ax.scatter(self.mep[0, 0], self.mep[0, 1], color='C0')
         ax.scatter(self.mep[-1, 0], self.mep[-1, 1], color='C0')
         ax.plot(self.mep[:, 0], self.mep[:, 1])
+        return fig, ax
+
+    def plot_mep_energy_profile(self, dpi=300):
+        """
+        Plots the energy profile along the minimum energy path in $V$.
+        """
+        energy_mep = griddata(self.grid, self.V.ravel(), self.mep, method='linear')
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(np.linspace(0, 1, len(energy_mep)), energy_mep)
         return fig, ax
 
     def plot_string_evolution(self, cmap=cm.gray, **plot_V_kwargs):
