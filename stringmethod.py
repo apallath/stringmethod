@@ -158,6 +158,10 @@ class String2D:
 
         return string
 
+    def get_mep_energy_profile(self):
+        energy_mep = griddata(self.grid, self.V.ravel(), self.mep, method='linear')
+        return self.mep, energy_mep
+
     def plot_V(self, clip_min=None, clip_max=None, levels=None, cmap='RdYlBu', dpi=300):
         """
         Generates a filled contour plot of the energy landscape $V$.
@@ -202,7 +206,7 @@ class String2D:
         ax.plot(np.linspace(0, 1, len(energy_mep)), energy_mep)
         return fig, ax
 
-    def plot_string_evolution(self, cmap=cm.gray, **plot_V_kwargs):
+    def plot_string_evolution(self, string_cmap=cm.gray, **plot_V_kwargs):
         """
         Plots the evolution of the string on the energy landscape $V$.
 
@@ -211,7 +215,7 @@ class String2D:
             **plot_V_kwargs: Keyword arguments for plotting the energy landscape V.
         """
         fig, ax, cbar = self.plot_V(**plot_V_kwargs)
-        colors = cmap(np.linspace(0, 1, len(self.string_traj)))
+        colors = string_cmap(np.linspace(0, 1, len(self.string_traj)))
         for sidx, string in enumerate(self.string_traj):
             ax.plot(string[:, 0], string[:, 1], '--', color=colors[sidx])
         return fig, ax, cbar
