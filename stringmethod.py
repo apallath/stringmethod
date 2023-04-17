@@ -4,10 +4,10 @@
 # Reference: Weinan E, "Simplified and improved string method for computing the minimum energy paths in barrier-crossing events",
 # J. Chem. Phys. 126, 164103 (2007), https://doi.org/10.1063/1.2720838
 
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from scipy.interpolate import griddata, interp1d, UnivariateSpline
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import UnivariateSpline, griddata, interp1d
 from tqdm import tqdm
 
 
@@ -35,7 +35,8 @@ class String2D:
         string_traj: Trajectory showing the evolution of the string (default=[]).
         mep: Converged minimum energy path (default=None, if not converged).
     """
-    def __init__(self, x, y, V, indexing='xy'):
+
+    def __init__(self, x, y, V, indexing="xy"):
         self.x = x
         self.y = y
         self.V = V
@@ -47,9 +48,9 @@ class String2D:
         # Compute gradients
         self.indexing = indexing
 
-        if self.indexing == 'xy':
+        if self.indexing == "xy":
             self.gradY, self.gradX = np.gradient(self.V, self.x, self.y)
-        elif self.indexing == 'ij':
+        elif self.indexing == "ij":
             self.gradX, self.gradY = np.gradient(self.V, self.x, self.y)
         else:
             raise ValueError("Indexing method not recognized.")
@@ -58,14 +59,27 @@ class String2D:
         self.string_traj = []
         self.mep = None
 
-    def compute_mep(self, begin, end, mid=[], spline_order=2, npts=100, integrator='forward_euler', dt=0.1, tol=None, maxsteps=100, traj_every=10):
+    def compute_mep(
+        self,
+        begin,
+        end,
+        mid=[],
+        spline_order=2,
+        npts=100,
+        integrator="forward_euler",
+        dt=0.1,
+        tol=None,
+        maxsteps=100,
+        traj_every=10,
+        flexible=True,
+    ):
         """
         Computes the minimum free energy path. The points `begin`
         and `end` and the midpoints passed through `mid` are used to generate
         an initial guess (a k-order spline which interpolates through all the points).
         If no midpoints are defined, then the initial guess is a line connecting `begin`
-        and `end`. The ends of the string are free to move, and are not fixed to `begin`
-        and `end`.
+        and `end`. If `flexible` is set to False, the ends of the string are fixed to `begin`
+        and `end`, otherwise the ends of the string are free to move.
 
         Args:
             begin: Array of shape (2,) specifying starting point of the string.
@@ -80,13 +94,14 @@ class String2D:
                 consecutive steps (default = max{npts^-4, 10^-10}).
             maxsteps: Maximum number of steps to take (default=100).
             traj_every: Interval to store string trajectory (default=10).
+            flexible: If False, the ends of the string are fixed (default=True).
 
         Returns:
             mep: Array of shape (npts, 2) specifying string images along the minimum energy path between `begin` and `end`.
         """
         # Calculate params
         if tol is None:
-            tol = max([npts ** -4, 1e-10])
+            tol = max([npts**-4, 1e-10])
 
         # Generate initial guess
         if len(mid) > 0:
@@ -112,7 +127,7 @@ class String2D:
             # Integrator step
             if integrator == "forward_euler":
                 old_string[:] = string
-                string = self.step_euler(string, dt)
+                string = self.step_euler(string, dt, flexible=flexible)
             else:
                 raise ValueError("Invalid integrator")
 
@@ -128,7 +143,11 @@ class String2D:
             if tstep % traj_every == 0:
                 self.string_traj.append(string)
                 # Print convergence
-                print("Change in string: {:.10f}".format(np.sqrt(np.mean((string - old_string) ** 2))))
+                print(
+                    "Change in string: {:.10f}".format(
+                        np.sqrt(np.mean((string - old_string) ** 2))
+                    )
+                )
 
             # Test for convergence
             if np.sqrt(np.mean((string - old_string) ** 2)) < tol:
@@ -137,32 +156,38 @@ class String2D:
         # Store minimum energy path
         self.mep = string
 
-    def step_euler(self, string, dt):
+    def step_euler(self, string, dt, flexible=True):
         """
         Evolves string images in time in response to forces calculated from the energy landscape.
 
         Args:
             string: Array of shape (npts, 2) specifying string images at the previous timestep.
             dt: Timestep.
+            flexible: If False, the ends of the string are fixed (default=True).
 
         Returns:
             newstring: Array of shape (npts, 2) specifying string images after a timestep.
         """
         # Compute gradients at string points
-        string_grad_x = griddata(self.grid, self.gradX.ravel(), string, method='linear')
-        string_grad_y = griddata(self.grid, self.gradY.ravel(), string, method='linear')
-        h = np.max(np.sqrt(string_grad_x ** 2 + string_grad_y ** 2))
+        string_grad_x = griddata(self.grid, self.gradX.ravel(), string, method="linear")
+        string_grad_y = griddata(self.grid, self.gradY.ravel(), string, method="linear")
+        h = np.max(np.sqrt(string_grad_x**2 + string_grad_y**2))
 
         # Euler step
-        string = string - dt * np.vstack([string_grad_x, string_grad_y]).T / h
+        if flexible:
+            string = string - dt * np.vstack([string_grad_x, string_grad_y]).T / h
+        else:
+            string[1:-1] = (
+                string[1:-1] - dt * np.vstack([string_grad_x, string_grad_y]).T[1:-1] / h
+            )
 
         return string
 
     def get_mep_energy_profile(self):
-        energy_mep = griddata(self.grid, self.V.ravel(), self.mep, method='linear')
+        energy_mep = griddata(self.grid, self.V.ravel(), self.mep, method="linear")
         return self.mep, energy_mep
 
-    def plot_V(self, clip_min=None, clip_max=None, levels=None, cmap='RdYlBu', dpi=300):
+    def plot_V(self, clip_min=None, clip_max=None, levels=None, cmap="RdYlBu", dpi=300):
         """
         Generates a filled contour plot of the energy landscape $V$.
 
@@ -192,8 +217,8 @@ class String2D:
             **plot_V_kwargs: Keyword arguments for plotting the energy landscape V.
         """
         fig, ax, cbar = self.plot_V(**plot_V_kwargs)
-        ax.scatter(self.mep[0, 0], self.mep[0, 1], color='C0')
-        ax.scatter(self.mep[-1, 0], self.mep[-1, 1], color='C0')
+        ax.scatter(self.mep[0, 0], self.mep[0, 1], color="C0")
+        ax.scatter(self.mep[-1, 0], self.mep[-1, 1], color="C0")
         ax.plot(self.mep[:, 0], self.mep[:, 1])
         return fig, ax, cbar
 
@@ -201,7 +226,7 @@ class String2D:
         """
         Plots the energy profile along the minimum energy path in $V$.
         """
-        energy_mep = griddata(self.grid, self.V.ravel(), self.mep, method='linear')
+        energy_mep = griddata(self.grid, self.V.ravel(), self.mep, method="linear")
         fig, ax = plt.subplots(dpi=dpi)
         ax.plot(np.linspace(0, 1, len(energy_mep)), energy_mep)
         return fig, ax
@@ -217,5 +242,5 @@ class String2D:
         fig, ax, cbar = self.plot_V(**plot_V_kwargs)
         colors = string_cmap(np.linspace(0, 1, len(self.string_traj)))
         for sidx, string in enumerate(self.string_traj):
-            ax.plot(string[:, 0], string[:, 1], '--', color=colors[sidx])
+            ax.plot(string[:, 0], string[:, 1], "--", color=colors[sidx])
         return fig, ax, cbar
